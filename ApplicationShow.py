@@ -13,10 +13,11 @@ class ApplicationShow(object):
         self.__text_name = None
 
     def show(self):
-        # for data in self.__data:
-        #     print data['url'] + data['title'] + data['summary']
+        for data in self.__data:
+            print data['url'] + data['title'] + data['summary']
+        print 'show !'
         # self.write_to_file('123.txt')
-        self.write_to_csv("1.csv")
+        # self.write_to_csv("1.csv")
 
     # 暂时以数组的形式一行一行信息
     def add(self, url, title, summary):

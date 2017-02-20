@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
+import threading
 import time
+
+import thread
 
 from ApplicationShow import ApplicationShow
 from Dispatch import Dispatch
 from UrlManager import UrlManager
 from HtmlParser import HtmlParser
+
 
 # 操作运行程序
 
@@ -27,10 +31,9 @@ from HtmlParser import HtmlParser
 
 class CrawlerMain(object):
 
-
     def __init__(self):
         self.G_STATE_OK = 200
-        self.crawMaxCount = -1
+        self.crawMaxNum = -1
         self.crawCountNum = 0
 
 
@@ -39,9 +42,7 @@ class CrawlerMain(object):
         self.htmlParser = HtmlParser("http://baike.baidu.com")
         self.applicationShow = ApplicationShow()
 
-    def craw(self, url):
-        self.urlManager.add_url([url])
-
+    def __crawl(self, url):
         """
          设定计数器，
          如果crawMaxCount > 0 说明需要进行计数，
@@ -50,43 +51,61 @@ class CrawlerMain(object):
 
          否则，不进行计数
         """
-        while self.urlManager.has_next_url():
+        try:
+            self.dispatch.launch_request(url)
+            if self.dispatch.get_status() != self.G_STATE_OK:
+                return
 
-            if 0 < self.crawMaxCount < self.crawCountNum:
-                break
+            context = self.dispatch.get_content()
 
-            new_url = self.urlManager.get_url()
-            try:
-                self.dispatch.launch_request(new_url)
-                if self.dispatch.get_status() != self.G_STATE_OK:
-                    continue
+            self.htmlParser.set_content(context)
+            self.htmlParser.parser()
 
-                context = self.dispatch.get_content()
+            summary = self.htmlParser.get_summary()
+            title = self.htmlParser.get_title
 
-                self.htmlParser.set_content(context)
-                self.htmlParser.parser()
+            urls = self.htmlParser.get_new_urls()
 
-                summary = self.htmlParser.get_summary()
-                title = self.htmlParser.get_title
-
-                urls = self.htmlParser.get_new_urls()
-
-            except Exception, e:
-                    print "Error " + new_url + " " + str(e)
-                    continue
+        except Exception, e:
+            print "Error " + url + " " + str(e)
+            return
 
 
-            self.applicationShow.add(new_url, title, summary)
-            self.urlManager.add_url(urls)
+        self.applicationShow.add(url, title, summary)
+        self.urlManager.add_url(urls)
 
-            self.crawCountNum += 1
-            print self.crawCountNum
+    def start(self, start_url):
+        self.urlManager.add_url([start_url])
+        while True:
+            threads = []
+            for url in self.urlManager.get_urlSet():
+                if self.crawCountNum > self.crawMaxNum:
+                    return
+                else:
+                    thread = threading.Thread(target=self.__crawl, args=(url,))
+                    thread.start()
+                    threads.append(thread)
+                    self.crawCountNum += 1
+
+                while True:
+                    time.sleep(1)
+                    finishThreadNum = 0
+                    for thread in threads:
+                        if not thread.is_alive():
+                            finishThreadNum += 1
+
+                    if finishThreadNum == len(threads):
+                        break
+
+
+
+
 
     def show(self):
         self.applicationShow.show()
 
     def set_craw_max_count(self, count):
-        self.crawMaxCount = count
+        self.crawMaxNum = count
 
 
 if __name__ == "__main__":
@@ -95,7 +114,7 @@ if __name__ == "__main__":
     max_count = 5
     crawlerMain.set_craw_max_count(max_count)
     startTime = time.time()
-    crawlerMain.craw(main_url)
+    crawlerMain.start(main_url)
     endTime = time.time()
 
     timeFile = open('time.txt', 'a')
