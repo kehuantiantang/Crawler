@@ -92,7 +92,7 @@ class CrawlerMain(object):
 if __name__ == "__main__":
     main_url = "http://baike.baidu.com/view/1395656.htm"
     crawlerMain = CrawlerMain()
-    max_count = 10
+    max_count = 5
     crawlerMain.set_craw_max_count(max_count)
     startTime = time.time()
     crawlerMain.craw(main_url)
