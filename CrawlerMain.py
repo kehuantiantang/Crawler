@@ -78,28 +78,40 @@ class CrawlerMain(object):
         self.urlManager.add_url([start_url])
         while True:
             threads = []
+            finish = False
             for url in self.urlManager.get_urlSet():
                 if self.crawCountNum > self.crawMaxNum:
-                    return
+                    finish = True
+                    break
                 else:
                     thread = threading.Thread(target=self.__crawl, args=(url,))
-                    thread.start()
                     threads.append(thread)
                     self.crawCountNum += 1
 
-                while True:
-                    time.sleep(1)
-                    finishThreadNum = 0
-                    for thread in threads:
-                        if not thread.is_alive():
-                            finishThreadNum += 1
+            self.__start_thread_pool(threads)
 
-                    if finishThreadNum == len(threads):
-                        break
+            while not self.__is_task_done(threads):
+                time.sleep(1)
+                print self.crawCountNum
 
+            if finish:
+                return
 
 
+    def __start_thread_pool(self, threads):
+        for thread in threads :
+            thread.start()
 
+    def __is_task_done(self, threads):
+        finishThreadNum = 0
+        for thread in threads:
+            if not thread.is_alive():
+                finishThreadNum += 1
+        print "finish " + str(finishThreadNum)
+        if finishThreadNum == len(threads):
+            return True
+        else:
+            return False
 
     def show(self):
         self.applicationShow.show()
@@ -111,7 +123,7 @@ class CrawlerMain(object):
 if __name__ == "__main__":
     main_url = "http://baike.baidu.com/view/1395656.htm"
     crawlerMain = CrawlerMain()
-    max_count = 5
+    max_count = 20000
     crawlerMain.set_craw_max_count(max_count)
     startTime = time.time()
     crawlerMain.start(main_url)
